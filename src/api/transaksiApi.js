@@ -10,6 +10,11 @@ export const getTransaksiByTagihan = async (idTagihan) => {
   return response.data;
 };
 
+export const createTransaksi = async (idTagihan) => {
+  const response = await axiosClient.post(`/transaksi/${idTagihan}`);
+  return response.data;
+};
+
 export const regenerateTransaksi = async (idTagihan) => {
   const response = await axiosClient.post(`/transaksi/regenerate/${idTagihan}`);
   return response.data;

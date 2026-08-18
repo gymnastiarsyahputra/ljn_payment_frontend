@@ -5,3 +5,18 @@
   --color-brand-navy: #1E3A5F;
   --color-primary: #1E4FA3;
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #bukti-pembayaran-print, #bukti-pembayaran-print * {
+    visibility: visible;
+  }
+  #bukti-pembayaran-print {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}

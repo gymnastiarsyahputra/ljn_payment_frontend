@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getAllTagihan } from '../api/tagihanApi'
+import { getAllPelanggan } from '../api/pelangganApi'
+import { createTransaksi } from '../api/transaksiApi'
 import Badge from '../components/ui/Badge'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate } from '../utils/formatDate'
@@ -13,15 +15,27 @@ const bulanNama = [
 
 function TagihanList() {
   const [tagihan, setTagihan] = useState([])
+  const [pelangganMap, setPelangganMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
+  const [actionError, setActionError] = useState(null)
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const data = await getAllTagihan()
-      setTagihan(data)
+      const [dataTagihan, dataPelanggan] = await Promise.all([
+        getAllTagihan(),
+        getAllPelanggan(),
+      ])
+      setTagihan(dataTagihan)
+
+      const map = {}
+      dataPelanggan.forEach((p) => {
+        map[p.id] = p.nama
+      })
+      setPelangganMap(map)
     } catch (err) {
       setError('Gagal memuat data tagihan. Pastikan backend sedang berjalan.')
       console.error(err)
@@ -37,6 +51,22 @@ function TagihanList() {
   const handleSuccess = () => {
     setIsModalOpen(false)
     fetchData()
+  }
+
+  const handleBuatTransaksi = async (idTagihan) => {
+    setActionLoadingId(idTagihan)
+    setActionError(null)
+    try {
+      const result = await createTransaksi(idTagihan)
+      window.open(result.payment_url, '_blank')
+      await fetchData()
+    } catch (err) {
+      const message = err.response?.data?.detail || 'Gagal membuat link pembayaran.'
+      setActionError(message)
+      console.error(err)
+    } finally {
+      setActionLoadingId(null)
+    }
   }
 
   if (loading) {
@@ -58,29 +88,37 @@ function TagihanList() {
       {error && (
         <p className="text-red-600 bg-red-50 p-4 rounded-lg mb-4">{error}</p>
       )}
+      {actionError && (
+        <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg mb-4">{actionError}</p>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">ID Pelanggan</th>
+              <th className="px-6 py-3 text-sm font-semibold text-gray-600">Nama</th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">Periode</th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">Jumlah Tagihan</th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">Jatuh Tempo</th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">Status</th>
+              <th className="px-6 py-3 text-sm font-semibold text-gray-600">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {tagihan.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-8 text-center text-gray-400">
+                <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
                   Belum ada data tagihan
                 </td>
               </tr>
             ) : (
               tagihan.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-gray-600">#{t.id_pelanggan}</td>
+                  <td className="px-6 py-4 text-gray-400 font-mono text-xs">#{t.id_pelanggan}</td>
+                  <td className="px-6 py-4 text-gray-800 font-medium">
+                    {pelangganMap[t.id_pelanggan] || '-'}
+                  </td>
                   <td className="px-6 py-4 text-gray-600">
                     {bulanNama[t.periode_bulan]} {t.periode_tahun}
                   </td>
@@ -92,6 +130,20 @@ function TagihanList() {
                   </td>
                   <td className="px-6 py-4">
                     <Badge status={t.status} />
+                  </td>
+                  <td className="px-6 py-4">
+                    {t.status === 'belum_bayar' && (
+                      <button
+                        onClick={() => handleBuatTransaksi(t.id)}
+                        disabled={actionLoadingId === t.id}
+                        className="text-primary text-sm font-medium hover:underline disabled:opacity-50"
+                      >
+                        {actionLoadingId === t.id ? 'Memproses...' : 'Buat Link Bayar'}
+                      </button>
+                    )}
+                    {t.status === 'lunas' && (
+                      <span className="text-gray-300 text-sm">-</span>
+                    )}
                   </td>
                 </tr>
               ))

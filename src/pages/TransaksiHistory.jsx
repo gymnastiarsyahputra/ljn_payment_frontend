@@ -1,23 +1,52 @@
 import { useEffect, useState } from 'react'
-import { getAllTransaksi, regenerateTransaksi } from '../api/transaksiApi'
+import { getAllTransaksi } from '../api/transaksiApi'
+import { getAllPelanggan } from '../api/pelangganApi'
+import { getAllTagihan } from '../api/tagihanApi'
 import Badge from '../components/ui/Badge'
+import Modal from '../components/ui/Modal'
+import BuktiPembayaran from '../components/BuktiPembayaran'
 import { formatCurrency } from '../utils/formatCurrency'
+
+const bulanNama = [
+  '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+]
 
 function TransaksiHistory() {
   const [transaksi, setTransaksi] = useState([])
+  const [pelangganMap, setPelangganMap] = useState({})
+  const [tagihanMap, setTagihanMap] = useState({})
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)  
-  const [actionLoadingId, setActionLoadingId] = useState(null)
-  const [actionError, setActionError] = useState(null)
+  const [error, setError] = useState(null)
+  const [selectedTransaksi, setSelectedTransaksi] = useState(null)
+  const [pelangganNama, setPelangganNama] = useState('')
+  const [periodeTagihan, setPeriodeTagihan] = useState('')
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const data = await getAllTransaksi()
-      const sorted = [...data].sort(
+      const [dataTransaksi, dataPelanggan, dataTagihan] = await Promise.all([
+        getAllTransaksi(),
+        getAllPelanggan(),
+        getAllTagihan(),
+      ])
+      const sorted = [...dataTransaksi].sort(
         (a, b) => new Date(b.waktu_transaksi) - new Date(a.waktu_transaksi)
       )
       setTransaksi(sorted)
+
+      const pMap = {}
+      dataPelanggan.forEach((p) => { pMap[p.id] = p.nama })
+      setPelangganMap(pMap)
+
+      const tMap = {}
+      dataTagihan.forEach((t) => {
+        tMap[t.id] = {
+          id_pelanggan: t.id_pelanggan,
+          periode: `${bulanNama[t.periode_bulan]} ${t.periode_tahun}`,
+        }
+      })
+      setTagihanMap(tMap)
     } catch (err) {
       setError('Gagal memuat data transaksi. Pastikan backend sedang berjalan.')
       console.error(err)
@@ -41,21 +70,15 @@ function TransaksiHistory() {
     }).format(new Date(value))
   }
 
-  const handleRegenerate = async (idTagihan) => {
-    setActionLoadingId(idTagihan)
-    setActionError(null)
-    try {
-      const result = await regenerateTransaksi(idTagihan)
-      // langsung buka link pembayaran yang baru di tab baru
-      window.open(result.payment_url, '_blank')
-      await fetchData()
-    } catch (err) {
-      const message = err.response?.data?.detail || 'Gagal membuat ulang transaksi.'
-      setActionError(message)
-      console.error(err)
-    } finally {
-      setActionLoadingId(null)
-    }
+  const handleLihatBukti = (t) => {
+    const tagihanInfo = tagihanMap[t.id_tagihan]
+    setPelangganNama(pelangganMap[tagihanInfo?.id_pelanggan] || 'Pelanggan')
+    setPeriodeTagihan(tagihanInfo?.periode || '-')
+    setSelectedTransaksi(t)
+  }
+
+  const handlePrint = () => {
+    window.print()
   }
 
   if (loading) {
@@ -69,10 +92,6 @@ function TransaksiHistory() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Riwayat Transaksi</h1>
-
-      {actionError && (
-        <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg mb-4">{actionError}</p>
-      )}
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-left">
@@ -113,8 +132,8 @@ function TransaksiHistory() {
                   </td>
                   <td className="px-6 py-4">
                     {t.status_pembayaran === 'pending' && t.payment_url && (
-                      <a
-                        href={t.payment_url}
+                      
+                      <a  href={t.payment_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary text-sm font-medium hover:underline"
@@ -122,16 +141,15 @@ function TransaksiHistory() {
                         Buka Link Bayar
                       </a>
                     )}
-                    {(t.status_pembayaran === 'expired' || t.status_pembayaran === 'failed') && (
+                    {t.status_pembayaran === 'success' && (
                       <button
-                        onClick={() => handleRegenerate(t.id_tagihan)}
-                        disabled={actionLoadingId === t.id_tagihan}
-                        className="text-brand-orange text-sm font-medium hover:underline disabled:opacity-50"
+                        onClick={() => handleLihatBukti(t)}
+                        className="text-green-600 text-sm font-medium hover:underline"
                       >
-                        {actionLoadingId === t.id_tagihan ? 'Memproses...' : 'Buat Ulang'}
+                        Lihat Bukti
                       </button>
                     )}
-                    {(t.status_pembayaran === 'success') && (
+                    {(t.status_pembayaran === 'expired' || t.status_pembayaran === 'failed') && (
                       <span className="text-gray-300 text-sm">-</span>
                     )}
                   </td>
@@ -141,6 +159,36 @@ function TransaksiHistory() {
           </tbody>
         </table>
       </div>
+
+      <Modal
+        isOpen={!!selectedTransaksi}
+        onClose={() => setSelectedTransaksi(null)}
+        title="Bukti Pembayaran"
+      >
+        {selectedTransaksi && (
+          <div>
+            <BuktiPembayaran
+              transaksi={selectedTransaksi}
+              namaPelanggan={pelangganNama}
+              periode={periodeTagihan}
+            />
+            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-100 print:hidden">
+              <button
+                onClick={() => setSelectedTransaksi(null)}
+                className="px-4 py-2 text-sm rounded-lg text-gray-600 hover:bg-gray-100"
+              >
+                Tutup
+              </button>
+              <button
+                onClick={handlePrint}
+                className="px-4 py-2 text-sm rounded-lg bg-primary text-white hover:opacity-90"
+              >
+                Cetak
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
