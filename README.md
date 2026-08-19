@@ -22,18 +22,22 @@ Frontend admin panel untuk Sistem Pembayaran WiFi PT LJN (Lintas Jaringan Nusant
 - [Recharts](https://recharts.org/) — visualisasi grafik pendapatan
 
 ## Struktur Folder
-src/
-├── api/ # Konfigurasi axios & fungsi request per resource (pelanggan, paket, tagihan, transaksi, auth)
-├── components/
-│ ├── forms/ # Form untuk create/edit data (Pelanggan, Paket, Tagihan)
-│ ├── layout/ # Layout dashboard (Sidebar, Header, DashboardLayout)
-│ ├── ui/ # Komponen UI reusable (Badge, Button, Modal, SearchBar, Table)
-│ └── ProtectedRoute.jsx
-├── context/ # AuthContext untuk state autentikasi global
-├── hooks/ # Custom hooks
-├── pages/ # Halaman utama (Dashboard, Login, Register, Pelanggan, Paket, Tagihan, Transaksi)
-└── utils/ # Helper (format currency, format date)
 
+## Struktur Folder
+
+```
+src/
+├── api/            # Konfigurasi axios & fungsi request per resource (pelanggan, paket, tagihan, transaksi, auth)
+├── components/
+│   ├── forms/      # Form untuk create/edit data (Pelanggan, Paket, Tagihan)
+│   ├── layout/      # Layout dashboard (Sidebar, Header, DashboardLayout)
+│   ├── ui/          # Komponen UI reusable (Badge, Button, Modal, SearchBar, Table)
+│   └── ProtectedRoute.jsx
+├── context/        # AuthContext untuk state autentikasi global
+├── hooks/          # Custom hooks
+├── pages/          # Halaman utama (Dashboard, Login, Register, Pelanggan, Paket, Tagihan, Transaksi)
+└── utils/          # Helper (format currency, format date)
+```
 
 ## Persiapan & Instalasi
 
