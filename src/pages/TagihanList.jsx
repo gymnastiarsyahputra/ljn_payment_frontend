@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getAllTagihan } from '../api/tagihanApi'
 import { getAllPelanggan } from '../api/pelangganApi'
 import { createTransaksi } from '../api/transaksiApi'
@@ -7,6 +7,7 @@ import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate } from '../utils/formatDate'
 import Modal from '../components/ui/Modal'
 import TagihanForm from '../components/forms/TagihanForm'
+import SearchBar from '../components/ui/SearchBar'
 
 const bulanNama = [
   '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -21,6 +22,15 @@ function TagihanList() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [actionLoadingId, setActionLoadingId] = useState(null)
   const [actionError, setActionError] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredTagihan = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase()
+    if (!keyword) return tagihan
+    return tagihan.filter((t) =>
+      (pelangganMap[t.id_pelanggan] || '').toLowerCase().includes(keyword)
+    )
+  }, [tagihan, pelangganMap, searchTerm])
 
   const fetchData = async () => {
     setLoading(true)
@@ -92,6 +102,14 @@ function TagihanList() {
         <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg mb-4">{actionError}</p>
       )}
 
+      <div className="mb-4">
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Cari nama pelanggan..."
+        />
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -106,14 +124,14 @@ function TagihanList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {tagihan.length === 0 ? (
+            {filteredTagihan.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
-                  Belum ada data tagihan
+                  {searchTerm ? `Tidak ada tagihan untuk pelanggan "${searchTerm}"` : 'Belum ada data tagihan'}
                 </td>
               </tr>
             ) : (
-              tagihan.map((t) => (
+              filteredTagihan.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-gray-400 font-mono text-xs">#{t.id_pelanggan}</td>
                   <td className="px-6 py-4 text-gray-800 font-medium">

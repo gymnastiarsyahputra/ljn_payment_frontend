@@ -1,14 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getAllPaket } from '../api/paketApi'
 import { formatCurrency } from '../utils/formatCurrency'
 import Modal from '../components/ui/Modal'
 import PaketForm from '../components/forms/PaketForm'
+import SearchBar from '../components/ui/SearchBar'
 
 function PaketList() {
   const [paket, setPaket] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredPaket = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase()
+    if (!keyword) return paket
+    return paket.filter((p) => p.nama_paket?.toLowerCase().includes(keyword))
+  }, [paket, searchTerm])
 
   const fetchData = async () => {
     setLoading(true)
@@ -52,13 +60,21 @@ function PaketList() {
         <p className="text-red-600 bg-red-50 p-4 rounded-lg mb-4">{error}</p>
       )}
 
-      {paket.length === 0 ? (
+      <div className="mb-4">
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Cari nama paket..."
+        />
+      </div>
+
+      {filteredPaket.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-400">
-          Belum ada data paket langganan
+          {searchTerm ? `Tidak ada paket dengan nama "${searchTerm}"` : 'Belum ada data paket langganan'}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {paket.map((p) => (
+          {filteredPaket.map((p) => (
             <div key={p.id} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 relative">
               <span className="absolute top-4 right-4 text-xs font-mono text-gray-400 bg-gray-50 px-2 py-1 rounded">
                 ID: {p.id}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getAllTransaksi } from '../api/transaksiApi'
 import { getAllPelanggan } from '../api/pelangganApi'
 import { getAllTagihan } from '../api/tagihanApi'
@@ -6,6 +6,7 @@ import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
 import BuktiPembayaran from '../components/BuktiPembayaran'
 import { formatCurrency } from '../utils/formatCurrency'
+import SearchBar from '../components/ui/SearchBar'
 
 const bulanNama = [
   '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -21,6 +22,17 @@ function TransaksiHistory() {
   const [selectedTransaksi, setSelectedTransaksi] = useState(null)
   const [pelangganNama, setPelangganNama] = useState('')
   const [periodeTagihan, setPeriodeTagihan] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredTransaksi = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase()
+    if (!keyword) return transaksi
+    return transaksi.filter((t) => {
+      const idPelanggan = tagihanMap[t.id_tagihan]?.id_pelanggan
+      const nama = pelangganMap[idPelanggan] || ''
+      return nama.toLowerCase().includes(keyword)
+    })
+  }, [transaksi, tagihanMap, pelangganMap, searchTerm])
 
   const fetchData = async () => {
     setLoading(true)
@@ -93,12 +105,21 @@ function TransaksiHistory() {
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Riwayat Transaksi</h1>
 
+      <div className="mb-4">
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Cari nama pelanggan..."
+        />
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">Order ID</th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">ID Tagihan</th>
+              <th className="px-6 py-3 text-sm font-semibold text-gray-600">Nama Pelanggan</th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">Jumlah</th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">Metode</th>
               <th className="px-6 py-3 text-sm font-semibold text-gray-600">Waktu Transaksi</th>
@@ -107,17 +128,20 @@ function TransaksiHistory() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {transaksi.length === 0 ? (
+            {filteredTransaksi.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
-                  Belum ada riwayat transaksi
+                <td colSpan="8" className="px-6 py-8 text-center text-gray-400">
+                  {searchTerm ? `Tidak ada transaksi untuk pelanggan "${searchTerm}"` : 'Belum ada riwayat transaksi'}
                 </td>
               </tr>
             ) : (
-              transaksi.map((t) => (
+              filteredTransaksi.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-gray-600 font-mono text-xs">{t.order_id}</td>
                   <td className="px-6 py-4 text-gray-600">#{t.id_tagihan}</td>
+                  <td className="px-6 py-4 text-gray-800 font-medium">
+                    {pelangganMap[tagihanMap[t.id_tagihan]?.id_pelanggan] || '-'}
+                  </td>
                   <td className="px-6 py-4 font-medium text-gray-800">
                     {formatCurrency(t.jumlah_dibayar)}
                   </td>

@@ -6,6 +6,7 @@ const menuItems = [
   { label: 'Paket Langganan', path: '/paket' },
   { label: 'Tagihan', path: '/tagihan' },
   { label: 'Riwayat Transaksi', path: '/transaksi' },
+  { label: 'Tambah Admin', path: '/pengaturan/admin' },
 ]
 
 function Sidebar() {

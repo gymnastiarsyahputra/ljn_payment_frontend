@@ -7,6 +7,7 @@ import PelangganList from './pages/PelangganList'
 import PaketList from './pages/PaketList'
 import TagihanList from './pages/TagihanList'
 import TransaksiHistory from './pages/TransaksiHistory'
+import TambahAdmin from './pages/TambahAdmin'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
                 <Route path="/paket" element={<PaketList />} />
                 <Route path="/tagihan" element={<TagihanList />} />
                 <Route path="/transaksi" element={<TransaksiHistory />} />
+                <Route path="/pengaturan/admin" element={<TambahAdmin />} />
               </Routes>
             </DashboardLayout>
           </ProtectedRoute>

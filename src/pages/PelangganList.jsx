@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getAllPelanggan } from '../api/pelangganApi'
 import { getAllPaket } from '../api/paketApi'
 import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
 import PelangganForm from '../components/forms/PelangganForm'
+import SearchBar from '../components/ui/SearchBar'
 
 function PelangganList() {
   const [pelanggan, setPelanggan] = useState([])
@@ -11,6 +12,13 @@ function PelangganList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredPelanggan = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase()
+    if (!keyword) return pelanggan
+    return pelanggan.filter((p) => p.nama?.toLowerCase().includes(keyword))
+  }, [pelanggan, searchTerm])
 
   const fetchData = async () => {
     setLoading(true)
@@ -64,6 +72,14 @@ function PelangganList() {
         <p className="text-red-600 bg-red-50 p-4 rounded-lg mb-4">{error}</p>
       )}
 
+      <div className="mb-4">
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Cari nama pelanggan..."
+        />
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -78,14 +94,14 @@ function PelangganList() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {pelanggan.length === 0 ? (
+            {filteredPelanggan.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-8 text-center text-gray-400">
-                  Belum ada data pelanggan
+                  {searchTerm ? `Tidak ada pelanggan dengan nama "${searchTerm}"` : 'Belum ada data pelanggan'}
                 </td>
               </tr>
             ) : (
-              pelanggan.map((p) => (
+              filteredPelanggan.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-gray-400 font-mono text-xs">#{p.id}</td>
                   <td className="px-6 py-4 font-medium text-gray-800">{p.nama}</td>

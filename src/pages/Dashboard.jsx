@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getAllPelanggan } from '../api/pelangganApi'
 import { getAllTagihan } from '../api/tagihanApi'
 import { formatCurrency } from '../utils/formatCurrency'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 function StatCard({ label, value, subtext, color }) {
   return (
@@ -22,6 +23,7 @@ function Dashboard() {
     totalPendapatan: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [pendapatanBulanan, setPendapatanBulanan] = useState([])
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -34,6 +36,26 @@ function Dashboard() {
         const lunas = tagihan.filter((t) => t.status === 'lunas')
         const belumBayar = tagihan.filter((t) => t.status === 'belum_bayar')
         const pendapatan = lunas.reduce((sum, t) => sum + Number(t.jumlah_tagihan), 0)
+
+        const bulanNama = [
+          '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+          'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+
+        const groupedByMonth = {}
+        lunas.forEach((t) => {
+          const key = `${t.periode_tahun}-${String(t.periode_bulan).padStart(2, '0')}`
+          if (!groupedByMonth[key]) {
+            groupedByMonth[key] = {
+              key,
+              label: `${bulanNama[t.periode_bulan]} ${t.periode_tahun}`,
+              total: 0,
+            }
+          }
+          groupedByMonth[key].total += Number(t.jumlah_tagihan)
+        })
+
+        const chartData = Object.values(groupedByMonth).sort((a, b) => a.key.localeCompare(b.key))
+        setPendapatanBulanan(chartData)
 
         setStats({
           totalPelanggan: pelanggan.length,
@@ -82,6 +104,25 @@ function Dashboard() {
           subtext="Dari tagihan lunas"
           color="text-primary"
         />
+      </div>
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mt-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Pendapatan per Bulan</h2>
+        {pendapatanBulanan.length === 0 ? (
+          <p className="text-gray-400 text-sm text-center py-8">Belum ada data pendapatan</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={pendapatanBulanan}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+              <YAxis
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value) => `${(value / 1000).toLocaleString('id-ID')}rb`}
+              />
+              <Tooltip formatter={(value) => formatCurrency(value)} />
+              <Bar dataKey="total" fill="#2563eb" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   )
